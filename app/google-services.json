@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "430776494325",
+    "project_id": "vuikhoenauan",
+    "storage_bucket": "vuikhoenauan.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:430776494325:android:1a5de379fe57e1ab75fdbc",
+        "android_client_info": {
+          "package_name": "com.gk.vuikhoenauan"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCqB_gKk-qAzEWZTRKDAB_jEpAVJ6PmiC0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
