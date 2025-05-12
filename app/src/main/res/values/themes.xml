@@ -1,5 +1,13 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Theme.Vuikhoenauan" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Customize your theme -->
+        <item name="android:windowBackground">@android:color/white</item>
+    </style>
 
-    <style name="Theme.Vuikhoenauan" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Vuikhoenauan.Splash" parent="Theme.Vuikhoenauan">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
 </resources>

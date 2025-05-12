@@ -5,7 +5,6 @@ import com.gk.vuikhoenauan.data.api.RecipeApiService
 import com.gk.vuikhoenauan.data.model.RecipeResponse
 import com.gk.vuikhoenauan.data.model.RecipeDetailResponse
 
-
 class RecipeRepository {
     private val recipeApiService: RecipeApiService = RetrofitClient.recipeRetrofit.create(RecipeApiService::class.java)
 
@@ -58,6 +57,22 @@ class RecipeRepository {
             includeNutrition = includeNutrition,
             addWinePairing = addWinePairing,
             addTasteData = addTasteData
+        )
+    }
+
+    suspend fun getRandomRecipes(
+        apiKey: String,
+        includeNutrition: Boolean = true,
+        includeTags: String? = null,
+        excludeTags: String? = null,
+        number: Int? = 5
+    ): RecipeResponse {
+        return recipeApiService.getRandomRecipes(
+            apiKey = apiKey,
+            includeNutrition = includeNutrition,
+            includeTags = includeTags,
+            excludeTags = excludeTags,
+            number = number
         )
     }
 }

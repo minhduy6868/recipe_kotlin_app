@@ -14,7 +14,6 @@ interface GeminiApiService {
     ): Response<GeminiResponse>
 }
 
-// Data class để ánh xạ phản hồi JSON
 data class GeminiResponse(
     val candidates: List<Candidate>?,
     val error: GeminiError? = null

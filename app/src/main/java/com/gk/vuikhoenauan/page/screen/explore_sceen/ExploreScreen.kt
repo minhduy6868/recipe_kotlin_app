@@ -1,13 +1,12 @@
 package com.gk.vuikhoenauan.page.screen.explore_screen
 
+import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -28,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -42,12 +42,13 @@ import com.gk.vuikhoenauan.data.repository.UserRepository
 import com.gk.vuikhoenauan.page.components.RecipeCard
 import com.gk.vuikhoenauan.page.main_viewmodel.ViewModelFactory
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExploreScreen(
     userRepository: UserRepository,
+    context: Context = LocalContext.current,
     viewModel: ExploreViewModel = viewModel(
-        factory = ViewModelFactory(listOf(RecipeRepository(), userRepository))
+        factory = ViewModelFactory(listOf(RecipeRepository(), userRepository), context)
     ),
     onRecipeClick: (Int) -> Unit = {},
     onFavoriteClick: (Int, Boolean) -> Unit = { _, _ -> }
@@ -67,8 +68,8 @@ fun ExploreScreen(
                 .background(
                     Brush.linearGradient(
                         colors = listOf(
-                            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.1f),
-                            MaterialTheme.colorScheme.background
+                            Color(0xFFFFF8F0), // Trắng kem
+                            Color(0xFFF5F5F5) // Xám nhạt
                         )
                     )
                 )
@@ -77,7 +78,8 @@ fun ExploreScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(bottom = 80.dp)
             ) {
                 item {
                     SearchBar(
@@ -131,10 +133,10 @@ fun ExploreScreen(
                                                 onFavoriteClick(recipe.id, isFavorite)
                                             }
                                         },
-                                        modifier = Modifier.padding(horizontal = 8.dp),
-                                        accentColor = MaterialTheme.colorScheme.secondary,
+                                        modifier = Modifier.padding(horizontal = 12.dp),
+                                        accentColor = Color(0xFFFF6F61), // Cam san hô
                                         cardHeight = 180.dp,
-                                        shadowElevation = 4.dp,
+                                        shadowElevation = 3.dp,
                                         showFavoriteButton = true,
                                         isFavorite = favoriteRecipes.any { it.id == recipe.id },
                                         showCuisineBadge = true,
@@ -179,9 +181,9 @@ fun ExploreScreen(
                                                 }
                                             },
                                             modifier = Modifier.padding(horizontal = 12.dp),
-                                            accentColor = MaterialTheme.colorScheme.secondary,
-                                            cardHeight = 220.dp,
-                                            shadowElevation = 6.dp,
+                                            accentColor = Color(0xFFFF6F61),
+                                            cardHeight = 180.dp,
+                                            shadowElevation = 3.dp,
                                             showFavoriteButton = true,
                                             isFavorite = favoriteRecipes.any { it.id == recipe.id },
                                             showCuisineBadge = true,
@@ -204,20 +206,16 @@ fun ExploreScreen(
                         }
                     }
                 }
-
-                item {
-                    Spacer(modifier = Modifier.height(80.dp))
-                }
             }
 
             if (showLoginPrompt) {
                 AlertDialog(
                     onDismissRequest = { showLoginPrompt = false },
-                    title = { Text("Yêu cầu đăng nhập", style = MaterialTheme.typography.titleMedium) },
-                    text = { Text("Vui lòng đăng nhập để lưu công thức yêu thích.", style = MaterialTheme.typography.bodyMedium) },
+                    title = { Text("Login Required", style = MaterialTheme.typography.titleMedium) },
+                    text = { Text("Please log in to save favorite recipes.", style = MaterialTheme.typography.bodyMedium) },
                     confirmButton = {
                         TextButton(onClick = { showLoginPrompt = false }) {
-                            Text("Đóng")
+                            Text("Close")
                         }
                     }
                 )
@@ -226,7 +224,6 @@ fun ExploreScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SearchBar(
     query: String,
@@ -239,20 +236,27 @@ private fun SearchBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         TextField(
             value = query,
             onValueChange = onQueryChange,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp)
                 .height(48.dp)
-                .shadow(4.dp, RoundedCornerShape(20.dp))
-                .border(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f), RoundedCornerShape(20.dp)),
+                .shadow(2.dp, RoundedCornerShape(12.dp))
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.surface,
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        )
+                    ),
+                    RoundedCornerShape(12.dp)
+                ),
             placeholder = {
                 Text(
-                    "Khám phá công thức, nguyên liệu, hoặc ẩm thực...",
+                    "Search recipes, ingredients, or cuisines...",
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -260,9 +264,9 @@ private fun SearchBar(
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Search,
-                    contentDescription = "Tìm kiếm",
-                    tint = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.size(24.dp)
+                    contentDescription = "Search",
+                    tint = Color(0xFFFF6F61), // Cam san hô
+                    modifier = Modifier.size(20.dp)
                 )
             },
             trailingIcon = {
@@ -274,20 +278,20 @@ private fun SearchBar(
                     IconButton(onClick = onClear) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Xóa",
+                            contentDescription = "Clear",
                             tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
             },
-            shape = RoundedCornerShape(24.dp),
-            colors = TextFieldDefaults.textFieldColors(
-                containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(12.dp),
+            colors = TextFieldDefaults.colors(
+                unfocusedContainerColor = Color.Transparent,
+                focusedContainerColor = Color.Transparent,
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent,
-                disabledIndicatorColor = Color.Transparent,
-                cursorColor = MaterialTheme.colorScheme.secondary
+                cursorColor = Color(0xFFFF6F61)
             ),
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
@@ -313,20 +317,20 @@ private fun TrendingSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Text(
-            text = "Đang thịnh hành",
+            text = "Trending",
             style = MaterialTheme.typography.titleLarge.copy(
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.secondary,
-                fontSize = 16.sp
+                color = Color(0xFFF4A261), // Vàng mù tạt
+                fontSize = 18.sp
             ),
-            modifier = Modifier.padding(bottom = 12.dp)
+            modifier = Modifier.padding(bottom = 8.dp)
         )
 
         LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
             items(recipes, key = { it.id }) { trendingRecipe ->
@@ -334,10 +338,10 @@ private fun TrendingSection(
                     recipe = trendingRecipe,
                     onClick = { onRecipeClick(trendingRecipe.id) },
                     onFavoriteClick = { isFavorite -> onFavoriteClick(trendingRecipe.id, isFavorite) },
-                    modifier = Modifier.width(260.dp),
-                    accentColor = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.width(240.dp),
+                    accentColor = Color(0xFFFF6F61),
                     cardHeight = 140.dp,
-                    shadowElevation = 8.dp,
+                    shadowElevation = 3.dp,
                     showFavoriteButton = true,
                     isFavorite = favoriteRecipes.any { it.id == trendingRecipe.id },
                     showCuisineBadge = true,
@@ -355,7 +359,7 @@ private fun CuisineStrip(
     onCuisineSelected: (String) -> Unit
 ) {
     val cuisineColors = mapOf(
-        "All" to Color(0xFF0288D1),
+        "All" to Color(0xFFFF6F61), // Cam san hô
         "Italian" to Color(0xFF388E3C),
         "Mexican" to Color(0xFFD81B60),
         "Chinese" to Color(0xFFFBC02D),
@@ -368,16 +372,16 @@ private fun CuisineStrip(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Text(
-            text = "Khám phá ẩm thực",
+            text = "Explore Cuisines",
             style = MaterialTheme.typography.titleLarge.copy(
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.secondary,
-                fontSize = 20.sp
+                color = Color(0xFFF4A261), // Vàng mù tạt
+                fontSize = 18.sp
             ),
-            modifier = Modifier.padding(bottom = 12.dp)
+            modifier = Modifier.padding(bottom = 8.dp)
         )
 
         LazyRow(
@@ -385,7 +389,7 @@ private fun CuisineStrip(
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
             items(cuisines) { cuisine ->
-                val color = cuisineColors[cuisine] ?: MaterialTheme.colorScheme.secondary
+                val color = cuisineColors[cuisine] ?: Color(0xFFFF6F61)
                 CuisinePill(
                     cuisine = cuisine,
                     isSelected = cuisine == selectedCuisine,
@@ -404,29 +408,34 @@ private fun CuisinePill(
     color: Color,
     onClick: () -> Unit
 ) {
-    val containerColor = if (isSelected) color else MaterialTheme.colorScheme.surface
-    val contentColor = if (isSelected) Color.White else color
+    val containerColor = if (isSelected) {
+        Brush.linearGradient(listOf(color, color.copy(alpha = 0.7f)))
+    } else {
+        Brush.linearGradient(listOf(Color(0xFFA8D5BA), Color(0xFFA8D5BA).copy(alpha = 0.5f))) // Xanh lá nhạt
+    }
+    val contentColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
 
     Surface(
         modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
-            .height(38.dp)
-            .shadow(if (isSelected) 4.dp else 0.dp, RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(12.dp))
+            .height(32.dp)
             .clickable { onClick() },
-        color = containerColor,
-        shape = RoundedCornerShape(20.dp),
-        border = if (!isSelected) BorderStroke(1.5.dp, color.copy(alpha = 0.4f)) else null
+        color = Color.Transparent,
+        shape = RoundedCornerShape(12.dp),
+        border = if (!isSelected) BorderStroke(1.dp, Color(0xFFA8D5BA)) else null
     ) {
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.padding(horizontal = 20.dp)
+            modifier = Modifier
+                .background(containerColor)
+                .padding(horizontal = 16.dp)
         ) {
             Text(
                 text = cuisine.replaceFirstChar { it.uppercase() },
                 style = MaterialTheme.typography.labelLarge.copy(
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                     color = contentColor,
-                    fontSize = 16.sp
+                    fontSize = 14.sp
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -440,13 +449,13 @@ private fun LoadingIndicator() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(200.dp),
+            .height(160.dp),
         contentAlignment = Alignment.Center
     ) {
         CircularProgressIndicator(
-            color = MaterialTheme.colorScheme.secondary,
-            modifier = Modifier.size(56.dp),
-            strokeWidth = 4.dp
+            color = Color(0xFFFF6F61), // Cam san hô
+            modifier = Modifier.size(48.dp),
+            strokeWidth = 3.dp
         )
     }
 }
@@ -459,43 +468,43 @@ private fun ErrorMessage(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(32.dp),
+            .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
             imageVector = Icons.Default.Warning,
-            contentDescription = "Lỗi",
-            modifier = Modifier.size(56.dp),
-            tint = MaterialTheme.colorScheme.error
+            contentDescription = "Error",
+            modifier = Modifier.size(48.dp),
+            tint = Color(0xFFD32F2F) // Đỏ cam
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = message,
             style = MaterialTheme.typography.bodyLarge.copy(
                 fontWeight = FontWeight.Medium,
-                fontSize = 18.sp
+                fontSize = 16.sp
             ),
-            color = MaterialTheme.colorScheme.error,
+            color = Color(0xFFD32F2F),
             textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         Button(
             onClick = onRetry,
             colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.secondary,
-                contentColor = MaterialTheme.colorScheme.onSecondary
+                containerColor = Color(0xFFFF6F61),
+                contentColor = Color.White
             ),
             shape = RoundedCornerShape(12.dp),
             elevation = ButtonDefaults.buttonElevation(
-                defaultElevation = 4.dp,
-                pressedElevation = 6.dp
+                defaultElevation = 3.dp,
+                pressedElevation = 5.dp
             )
         ) {
             Text(
-                "Thử lại",
+                "Retry",
                 style = MaterialTheme.typography.labelLarge,
-                fontSize = 16.sp
+                fontSize = 14.sp
             )
         }
     }
@@ -506,20 +515,20 @@ private fun EmptySearchResults(query: String) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(32.dp),
+            .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
             imageVector = Icons.Default.Search,
-            contentDescription = "Không có kết quả",
-            modifier = Modifier.size(56.dp),
-            tint = MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f)
+            contentDescription = "No results",
+            modifier = Modifier.size(48.dp),
+            tint = Color(0xFFFF6F61).copy(alpha = 0.6f)
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "Không tìm thấy kết quả cho",
-            style = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp),
+            text = "No results found for",
+            style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
         )
         Spacer(modifier = Modifier.height(4.dp))
@@ -527,14 +536,14 @@ private fun EmptySearchResults(query: String) {
             text = "\"$query\"",
             style = MaterialTheme.typography.titleMedium.copy(
                 fontWeight = FontWeight.Bold,
-                fontSize = 20.sp
+                fontSize = 18.sp
             ),
-            color = MaterialTheme.colorScheme.secondary
+            color = Color(0xFFFF6F61)
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "Hãy thử với các nguyên liệu hoặc ẩm thực khác",
-            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 16.sp),
+            text = "Try searching with different ingredients or cuisines",
+            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
         )
     }

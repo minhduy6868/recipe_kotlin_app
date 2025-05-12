@@ -4,6 +4,8 @@ import android.util.Log
 import com.gk.vuikhoenauan.data.model.Recipe
 import com.gk.vuikhoenauan.data.model.User
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.tasks.await
 
 class UserRepository(
@@ -11,9 +13,17 @@ class UserRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 ) {
     private val TAG = "UserRepository"
+    private val _isLoggedIn = MutableStateFlow(auth.currentUser != null)
+    val isLoggedInFlow: StateFlow<Boolean> get() = _isLoggedIn
 
     init {
         auth.setLanguageCode("en") // Avoid X-Firebase-Locale warning
+        // Listen for auth state changes
+        auth.addAuthStateListener { firebaseAuth ->
+            val isLoggedIn = firebaseAuth.currentUser != null
+            Log.d(TAG, "Auth state changed: isLoggedIn=$isLoggedIn")
+            _isLoggedIn.value = isLoggedIn
+        }
     }
 
     suspend fun createUser(username: String, email: String, password: String): User? {

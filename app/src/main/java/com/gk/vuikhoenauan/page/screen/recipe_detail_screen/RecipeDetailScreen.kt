@@ -1,26 +1,30 @@
 package com.gk.vuikhoenauan.page.screen.recipe_detail_screen
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -31,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.gk.news_pro.data.repository.GeminiRepository
 import com.gk.vuikhoenauan.data.model.Recipe
 import com.gk.vuikhoenauan.data.repository.RecipeRepository
 import com.gk.vuikhoenauan.page.main_viewmodel.ViewModelFactory
@@ -41,18 +46,20 @@ fun RecipeDetailScreen(
     navController: NavController,
     recipeId: Int,
     recipeRepository: RecipeRepository,
+    geminiRepository: GeminiRepository,
+    context: Context = LocalContext.current,
     viewModel: RecipeDetailViewModel = viewModel(
-        factory = ViewModelFactory(listOf(recipeRepository))
+        factory = ViewModelFactory(listOf(recipeRepository, geminiRepository), context)
     )
 ) {
     val recipeDetailState by viewModel.recipeDetailState.collectAsState()
-    val context = LocalContext.current
+    var showChatbox by remember { mutableStateOf(false) }
+
+    
+    val apiKey = "9edad2b3cc5248ef86485f92d85d508a" // TODO: Move to BuildConfig
 
     LaunchedEffect(Unit) {
-        viewModel.fetchRecipeDetails(
-            recipeId = recipeId,
-            apiKey = "9edad2b3cc5248ef86485f92d85d508a" // Thay bằng API key của bạn
-        )
+        viewModel.fetchRecipeDetails(recipeId = recipeId, apiKey = apiKey)
     }
 
     Scaffold(
@@ -63,12 +70,22 @@ fun RecipeDetailScreen(
                         is RecipeDetailUiState.Success -> {
                             Text(
                                 (recipeDetailState as RecipeDetailUiState.Success).recipe.title,
-                                style = MaterialTheme.typography.titleLarge,
+                                style = MaterialTheme.typography.headlineSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF333333),
+                                    fontSize = 20.sp
+                                ),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
-                        else -> Text("Chi tiết công thức")
+                        else -> Text(
+                            "Recipe Details",
+                            style = MaterialTheme.typography.headlineSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 20.sp
+                            )
+                        )
                     }
                 },
                 navigationIcon = {
@@ -76,29 +93,60 @@ fun RecipeDetailScreen(
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onSurface
+                            tint = Color(0xFF333333)
                         )
                     }
                 },
+                actions = {
+                    if (recipeDetailState is RecipeDetailUiState.Success) {
+                        val recipe = (recipeDetailState as RecipeDetailUiState.Success).recipe
+                        IconButton(onClick = {
+                            val shareText = "Check out this recipe: ${recipe.title}\n${recipe.sourceUrl ?: ""}"
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, shareText)
+                            }
+                            context.startActivity(Intent.createChooser(intent, "Share Recipe"))
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "Share Recipe",
+                                tint = Color(0xFF333333)
+                            )
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
+                    containerColor = Color(0xFFFFF8F0), // Cream white
+                    titleContentColor = Color(0xFF333333)
                 )
             )
+        },
+        floatingActionButton = {
+            AnimatedVisibility(
+                visible = !showChatbox,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                FloatingActionButton(
+                    onClick = { showChatbox = true },
+                    containerColor = Color(0xFFF4A261), // Mustard yellow
+                    contentColor = Color.White,
+                    shape = CircleShape,
+                    elevation = FloatingActionButtonDefaults.elevation(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Face,
+                        contentDescription = "Open AI Chatbox"
+                    )
+                }
+            }
         }
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.1f),
-                            MaterialTheme.colorScheme.background
-                        )
-                    )
-                )
+                .background(Color(0xFFFFF8F0))
                 .padding(innerPadding)
         ) {
             when (recipeDetailState) {
@@ -108,15 +156,23 @@ fun RecipeDetailScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator(
-                            color = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.size(56.dp),
-                            strokeWidth = 4.dp
+                            color = Color(0xFFFF6F61),
+                            modifier = Modifier.size(48.dp),
+                            strokeWidth = 3.dp
                         )
                     }
                 }
                 is RecipeDetailUiState.Success -> {
                     val recipe = (recipeDetailState as RecipeDetailUiState.Success).recipe
-                    RecipeDetailContent(recipe, context)
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(bottom = 80.dp)
+                    ) {
+                        item { RecipeDetailContent(recipe, context) }
+                    }
                 }
                 is RecipeDetailUiState.Error -> {
                     Column(
@@ -129,115 +185,144 @@ fun RecipeDetailScreen(
                         Icon(
                             imageVector = Icons.Default.Warning,
                             contentDescription = "Error",
-                            modifier = Modifier.size(56.dp),
-                            tint = MaterialTheme.colorScheme.error
+                            modifier = Modifier.size(48.dp),
+                            tint = Color(0xFFD32F2F)
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             text = (recipeDetailState as RecipeDetailUiState.Error).message,
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.error,
+                            color = Color(0xFFD32F2F),
                             textAlign = TextAlign.Center
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
                         Button(
-                            onClick = {
-                                viewModel.fetchRecipeDetails(
-                                    recipeId = recipeId,
-                                    apiKey = "9edad2b3cc5248ef86485f92d85d508a"
-                                )
-                            },
+                            onClick = { viewModel.fetchRecipeDetails(recipeId = recipeId, apiKey = apiKey) },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.secondary,
-                                contentColor = MaterialTheme.colorScheme.onSecondary
+                                containerColor = Color(0xFFFF6F61),
+                                contentColor = Color.White
                             ),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text("Thử lại", style = MaterialTheme.typography.labelLarge)
+                            Text("Retry", style = MaterialTheme.typography.labelLarge)
                         }
                     }
                 }
+            }
+
+            AnimatedVisibility(
+                visible = showChatbox,
+                enter = slideInVertically(initialOffsetY = { it }),
+                exit = slideOutVertically(targetOffsetY = { it })
+            ) {
+                RecipeChatbox(
+                    recipe = (recipeDetailState as? RecipeDetailUiState.Success)?.recipe,
+                    onDismiss = { showChatbox = false },
+                    geminiRepository = geminiRepository
+                )
             }
         }
     }
 }
 
 @Composable
-private fun RecipeDetailContent(recipe: Recipe, context: android.content.Context) {
+private fun RecipeDetailContent(
+    recipe: Recipe,
+    context: Context
+) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        AsyncImage(
-            model = recipe.image,
-            contentDescription = recipe.title,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(240.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .shadow(4.dp, RoundedCornerShape(16.dp)),
-            contentScale = ContentScale.Crop
-        )
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Box {
+                AsyncImage(
+                    model = recipe.image,
+                    contentDescription = recipe.title,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(220.dp)
+                        .clip(RoundedCornerShape(16.dp)),
+                    contentScale = ContentScale.Crop
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(220.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color(0xFFFF6F61).copy(alpha = 0.5f)
+                                )
+                            )
+                        )
+                )
+            }
+        }
 
         Text(
             text = recipe.title,
             style = MaterialTheme.typography.headlineMedium.copy(
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                fontSize = 28.sp
+                color = Color(0xFFFF6F61), // Coral orange
+                fontSize = 24.sp
             ),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
 
         recipe.summary?.let {
-            Text(
-                text = it.replace(Regex("<[^>]+>"), ""),
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.onSurface
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFFF5F5F5).copy(alpha = 0.5f)
                 )
-            )
+            ) {
+                Text(
+                    text = it.replace(Regex("<[^>]+>"), ""),
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontSize = 14.sp,
+                        color = Color(0xFF333333)
+                    ),
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
         }
 
-        Divider(
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
-            thickness = 1.dp
-        )
-
-        Text(
-            text = "Nguyên liệu",
-            style = MaterialTheme.typography.titleLarge.copy(
-                fontWeight = FontWeight.Bold,
-                fontSize = 22.sp,
-                color = MaterialTheme.colorScheme.secondary
-            )
-        )
-
-        recipe.extendedIngredients?.let { ingredients ->
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                ingredients.forEach { ingredient ->
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp)),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    text = "Ingredients",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = Color(0xFFF4A261) // Mustard yellow
+                    )
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                recipe.extendedIngredients?.let { ingredients ->
+                    ingredients.forEach { ingredient ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(12.dp),
+                                .padding(vertical = 4.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
                                 text = ingredient.original ?: ingredient.name,
                                 style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontSize = 16.sp,
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    fontSize = 14.sp,
+                                    color = Color(0xFF333333)
                                 ),
                                 modifier = Modifier.weight(1f)
                             )
@@ -245,209 +330,187 @@ private fun RecipeDetailContent(recipe: Recipe, context: android.content.Context
                                 Text(
                                     text = "${measure.amount} ${measure.unitShort}",
                                     style = MaterialTheme.typography.bodyMedium.copy(
-                                        fontSize = 14.sp,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                        fontSize = 12.sp,
+                                        color = Color(0xFF333333).copy(alpha = 0.7f)
                                     )
                                 )
                             }
                         }
                     }
-                }
+                } ?: Text(
+                    text = "No ingredient information",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = 14.sp,
+                        color = Color(0xFF333333).copy(alpha = 0.6f)
+                    )
+                )
             }
-        } ?: Text(
-            text = "Không có thông tin nguyên liệu",
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-            )
-        )
+        }
 
-        Divider(
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
-            thickness = 1.dp
-        )
-
-        Text(
-            text = "Hướng dẫn",
-            style = MaterialTheme.typography.titleLarge.copy(
-                fontWeight = FontWeight.Bold,
-                fontSize = 22.sp,
-                color = MaterialTheme.colorScheme.secondary
-            )
-        )
-
-        recipe.analyzedInstructions?.let { instructions ->
-            instructions.forEach { instruction ->
-                instruction.steps?.forEachIndexed { index, step ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Surface(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(RoundedCornerShape(8.dp)),
-                            color = MaterialTheme.colorScheme.secondary
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    text = "Instructions",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = Color(0xFFF4A261)
+                    )
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                recipe.analyzedInstructions?.let { instructions ->
+                    instructions.forEach { instruction ->
+                        instruction.steps?.forEachIndexed { index, step ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                Surface(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .clip(RoundedCornerShape(8.dp)),
+                                    color = Color(0xFFFF6F61)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = "${step.number}",
+                                            style = MaterialTheme.typography.labelLarge.copy(
+                                                color = Color.White,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 12.sp
+                                            )
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "${step.number}",
-                                    style = MaterialTheme.typography.labelLarge.copy(
-                                        color = MaterialTheme.colorScheme.onSecondary,
-                                        fontWeight = FontWeight.Bold
-                                    )
+                                    text = step.step,
+                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                        fontSize = 14.sp,
+                                        color = Color(0xFF333333)
+                                    ),
+                                    modifier = Modifier.weight(1f)
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = step.step,
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                fontSize = 16.sp,
-                                color = MaterialTheme.colorScheme.onSurface
-                            ),
-                            modifier = Modifier.weight(1f)
-                        )
                     }
-                }
+                } ?: Text(
+                    text = "No instructions available",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = 14.sp,
+                        color = Color(0xFF333333).copy(alpha = 0.6f)
+                    )
+                )
             }
-        } ?: Text(
-            text = "Không có hướng dẫn",
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-            )
-        )
+        }
 
         recipe.readyInMinutes?.let {
-            Divider(
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
-                thickness = 1.dp
-            )
-            Text(
-                text = "Thời gian chuẩn bị",
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 22.sp,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-            )
-            Text(
-                text = "$it phút",
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            )
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = "Preparation Time",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = Color(0xFFF4A261)
+                        )
+                    )
+                    Text(
+                        text = "$it minutes",
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontSize = 14.sp,
+                            color = Color(0xFF333333)
+                        )
+                    )
+                }
+            }
         }
 
         recipe.servings?.let {
-            Divider(
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
-                thickness = 1.dp
-            )
-            Text(
-                text = "Khẩu phần",
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 22.sp,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-            )
-            Text(
-                text = "$it khẩu phần",
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            )
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = "Servings",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = Color(0xFFF4A261)
+                        )
+                    )
+                    Text(
+                        text = "$it servings",
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontSize = 14.sp,
+                            color = Color(0xFF333333)
+                        )
+                    )
+                }
+            }
         }
 
         recipe.nutrition?.let { nutrition ->
-            Divider(
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
-                thickness = 1.dp
-            )
-            Text(
-                text = "Thông tin dinh dưỡng",
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 22.sp,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-            )
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                nutrition.calories?.let {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
                     Text(
-                        text = "Calo: ${it.toInt()} kcal",
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.onSurface
+                        text = "Nutrition Information",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = Color(0xFFF4A261)
                         )
                     )
-                }
-                nutrition.fat?.let {
-                    Text(
-                        text = "Chất béo: ${it.toInt()} g",
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    )
-                }
-                nutrition.protein?.let {
-                    Text(
-                        text = "Protein: ${it.toInt()} g",
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    )
-                }
-                nutrition.carbs?.let {
-                    Text(
-                        text = "Carbs: ${it.toInt()} g",
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    )
-                }
-            }
-        }
-
-        recipe.winePairing?.let { winePairing ->
-            Divider(
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
-                thickness = 1.dp
-            )
-            Text(
-                text = "Kết hợp rượu",
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 22.sp,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-            )
-            winePairing.pairingText?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                )
-            }
-            if (winePairing.pairedWines.isNotEmpty()) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    winePairing.pairedWines.forEach { wine ->
+                    Spacer(modifier = Modifier.height(8.dp))
+                    nutrition.calories?.let {
                         Text(
-                            text = "- $wine",
+                            text = "Calories: ${it.toInt()} kcal",
                             style = MaterialTheme.typography.bodyLarge.copy(
-                                fontSize = 16.sp,
-                                color = MaterialTheme.colorScheme.onSurface
+                                fontSize = 14.sp,
+                                color = Color(0xFF333333)
+                            )
+                        )
+                    }
+                    nutrition.fat?.let {
+                        Text(
+                            text = "Fat: ${it.toInt()} g",
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontSize = 14.sp,
+                                color = Color(0xFF333333)
+                            )
+                        )
+                    }
+                    nutrition.protein?.let {
+                        Text(
+                            text = "Protein: ${it.toInt()} g",
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontSize = 14.sp,
+                                color = Color(0xFF333333)
+                            )
+                        )
+                    }
+                    nutrition.carbs?.let {
+                        Text(
+                            text = "Carbs: ${it.toInt()} g",
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontSize = 14.sp,
+                                color = Color(0xFF333333)
                             )
                         )
                     }
@@ -455,7 +518,47 @@ private fun RecipeDetailContent(recipe: Recipe, context: android.content.Context
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        recipe.winePairing?.let { winePairing ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = "Wine Pairing",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = Color(0xFFF4A261)
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    winePairing.pairingText?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontSize = 14.sp,
+                                color = Color(0xFF333333)
+                            )
+                        )
+                    }
+                    if (winePairing.pairedWines.isNotEmpty()) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            winePairing.pairedWines.forEach { wine ->
+                                Text(
+                                    text = "- $wine",
+                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                        fontSize = 14.sp,
+                                        color = Color(0xFF333333)
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         recipe.sourceUrl?.let { url ->
             Button(
@@ -465,27 +568,25 @@ private fun RecipeDetailContent(recipe: Recipe, context: android.content.Context
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .shadow(4.dp, RoundedCornerShape(12.dp)),
+                    .padding(vertical = 8.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.secondary,
-                    contentColor = MaterialTheme.colorScheme.onSecondary
+                    containerColor = Color(0xFFFF6F61),
+                    contentColor = Color.White
                 ),
                 elevation = ButtonDefaults.buttonElevation(
-                    defaultElevation = 4.dp,
-                    pressedElevation = 6.dp
+                    defaultElevation = 3.dp,
+                    pressedElevation = 5.dp
                 )
             ) {
                 Text(
-                    text = "Xem công thức đầy đủ",
+                    text = "View Full Recipe",
                     style = MaterialTheme.typography.labelLarge.copy(
-                        fontSize = 16.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
                     )
                 )
             }
         }
-
-        Spacer(modifier = Modifier.height(24.dp))
     }
 }

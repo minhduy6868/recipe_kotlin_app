@@ -2,9 +2,11 @@ package com.gk.vuikhoenauan.page.components
 
 import android.util.Log
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -16,87 +18,170 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.gk.vuikhoenauan.R
 import com.gk.vuikhoenauan.data.model.Recipe
 
 @Composable
 fun RecipeCard(
     recipe: Recipe,
     onClick: () -> Unit,
-    onFavoriteClick: (Boolean) -> Unit,
+    onFavoriteClick: (Boolean) -> Unit = { _ -> }, // Default empty lambda for screens not using favorite
     modifier: Modifier = Modifier,
-    accentColor: Color,
-    cardHeight: Dp,
-    shadowElevation: Dp,
-    showFavoriteButton: Boolean,
-    isFavorite: Boolean,
-    showCuisineBadge: Boolean,
-    isTrending: Boolean
+    accentColor: Color = Color(0xFFFF6F61), // Coral Orange
+    cardHeight: Dp = 110.dp, // Reduced height for compactness
+    shadowElevation: Dp = 2.dp, // Soft shadow
+    showFavoriteButton: Boolean = true, // Allow controlling favorite button visibility
+    isFavorite: Boolean = false,
+    showCuisineBadge: Boolean = true,
+    isTrending: Boolean = false,
+    trailingContent: (@Composable () -> Unit)? = null // For RandomRecipesScreen (Add to Wheel button)
 ) {
     var favorite by remember { mutableStateOf(isFavorite) }
-    val favoriteScale by animateFloatAsState(if (favorite) 1.2f else 1f)
+    val favoriteScale by animateFloatAsState(
+        targetValue = if (favorite) 1.3f else 1f,
+        animationSpec = tween(durationMillis = 200)
+    )
+    val cardScale by animateFloatAsState(
+        targetValue = if (favorite) 0.97f else 1f,
+        animationSpec = tween(durationMillis = 150)
+    )
 
-    Surface(
+    Card(
         modifier = modifier
             .fillMaxWidth()
             .height(cardHeight)
-            .shadow(shadowElevation, RoundedCornerShape(12.dp))
-            .clip(RoundedCornerShape(12.dp))
+            .scale(cardScale)
+            .shadow(shadowElevation, RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(10.dp))
             .clickable {
                 Log.d("RecipeCard", "Clicked on recipe: ${recipe.title}")
                 onClick()
             },
-        color = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(12.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFFFF8F0) // Cream White
+        ),
+        shape = RoundedCornerShape(10.dp)
     ) {
         Box {
             Row(
                 modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically // Center content vertically
             ) {
-                AsyncImage(
-                    model = recipe.image,
-                    contentDescription = recipe.title,
+                // Image with Trending badge
+                Box(
                     modifier = Modifier
-                        .width(cardHeight * 0.6f)
+                        .width(cardHeight * 0.7f) // Large image ratio
                         .fillMaxHeight()
-                        .clip(RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)),
-                    contentScale = ContentScale.Crop
-                )
+                ) {
+                    AsyncImage(
+                        model = recipe.image ?: "https://via.placeholder.com/150",
+                        contentDescription = recipe.title,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(topStart = 10.dp, bottomStart = 10.dp)),
+                        contentScale = ContentScale.Crop,
+                        placeholder = painterResource(R.drawable.ic_launcher_background),
+                        //error = painterResource(R.drawable.placeholder_image)
+                    )
 
+                    if (isTrending) {
+                        Surface(
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(3.dp),
+                            color = Color.Transparent,
+                            shape = RoundedCornerShape(5.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        Brush.linearGradient(
+                                            listOf(
+                                                Color(0xFFA8D5BA), // Light Green
+                                                Color(0xFFA8D5BA).copy(alpha = 0.7f)
+                                            )
+                                        ),
+                                        RoundedCornerShape(5.dp)
+                                    )
+                                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "Trending",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 9.sp,
+                                        color = Color.White
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Text content
                 Column(
                     modifier = Modifier
                         .fillMaxHeight()
-                        .padding(vertical = 12.dp, horizontal = 8.dp),
+                        .weight(1f)
+                        .padding(vertical = 4.dp, horizontal = 6.dp),
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
                         Text(
                             text = recipe.title,
-                            style = MaterialTheme.typography.titleMedium.copy(
+                            style = MaterialTheme.typography.titleSmall.copy(
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
-                                color = MaterialTheme.colorScheme.onSurface
+                                fontSize = 14.sp,
+                                color = Color(0xFF333333)
                             ),
-                            maxLines = 2,
+                            maxLines = 3,
                             overflow = TextOverflow.Ellipsis
                         )
 
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(3.dp))
 
-                        recipe.readyInMinutes?.let {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            recipe.readyInMinutes?.let {
+                                Text(
+                                    text = "$it min",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontSize = 11.sp,
+                                        color = Color(0xFF333333).copy(alpha = 0.6f)
+                                    )
+                                )
+                            }
+
+                            recipe.servings?.let {
+                                Text(
+                                    text = "$it servings",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontSize = 11.sp,
+                                        color = Color(0xFF333333).copy(alpha = 0.6f)
+                                    )
+                                )
+                            }
+                        }
+
+                        recipe.healthScore?.let { score ->
                             Text(
-                                text = "$it phút",
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    fontSize = 14.sp,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                text = "Health: ${score.toInt()}/100",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF333333).copy(alpha = 0.6f)
                                 )
                             )
                         }
@@ -104,43 +189,49 @@ fun RecipeCard(
 
                     if (showCuisineBadge && recipe.cuisines?.isNotEmpty() == true) {
                         Surface(
-                            color = accentColor.copy(alpha = 0.1f),
-                            shape = RoundedCornerShape(8.dp)
+                            color = Color.Transparent,
+                            shape = RoundedCornerShape(5.dp)
                         ) {
-                            Text(
-                                text = recipe.cuisines.first(),
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = FontWeight.Medium,
-                                    fontSize = 12.sp,
-                                    color = accentColor
-                                ),
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        Brush.linearGradient(
+                                            listOf(
+                                                accentColor, // Coral Orange
+                                                Color(0xFFF4A261) // Mustard Yellow
+                                            )
+                                        ),
+                                        RoundedCornerShape(5.dp)
+                                    )
+                                    .padding(horizontal = 5.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = recipe.cuisines.first(),
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 9.sp,
+                                        color = Color.White
+                                    )
+                                )
+                            }
                         }
+                    }
+                }
+
+                // Trailing content (e.g., Add to Wheel button)
+                if (trailingContent != null) {
+                    Box(
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .wrapContentSize()
+                            .align(Alignment.CenterVertically) // Align vertically within Row
+                    ) {
+                        trailingContent()
                     }
                 }
             }
 
-            if (isTrending) {
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp),
-                    color = MaterialTheme.colorScheme.secondary,
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text(
-                        text = "Trending",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSecondary
-                        ),
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-            }
-
+            // Favorite button
             if (showFavoriteButton) {
                 IconButton(
                     onClick = {
@@ -149,20 +240,21 @@ fun RecipeCard(
                         Log.d("RecipeCard", "Favorite toggled: $favorite for recipe ${recipe.title}")
                     },
                     modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(8.dp)
-                        .size(28.dp)
+                        .align(Alignment.TopEnd)
+                        .padding(3.dp)
+                        .size(20.dp)
+                        .shadow(1.dp, CircleShape)
                         .background(
-                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
-                            shape = RoundedCornerShape(8.dp)
+                            Color(0xFFFFF8F0).copy(alpha = 0.9f), // Cream White
+                            shape = CircleShape
                         )
                 ) {
                     Icon(
                         imageVector = if (favorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                         contentDescription = if (favorite) "Remove favorite" else "Add favorite",
-                        tint = if (favorite) accentColor else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        tint = if (favorite) accentColor else Color(0xFF333333).copy(alpha = 0.6f),
                         modifier = Modifier
-                            .size(20.dp)
+                            .size(16.dp)
                             .scale(favoriteScale)
                     )
                 }

@@ -43,4 +43,13 @@ interface RecipeApiService {
         @Query("addWinePairing") addWinePairing: Boolean = true,
         @Query("addTasteData") addTasteData: Boolean = false
     ): RecipeDetailResponse
+
+    @GET("recipes/random")
+    suspend fun getRandomRecipes(
+        @Query("apiKey") apiKey: String,
+        @Query("includeNutrition") includeNutrition: Boolean = true,
+        @Query("include-tags") includeTags: String? = null,
+        @Query("exclude-tags") excludeTags: String? = null,
+        @Query("number") number: Int? = 5
+    ): RecipeResponse
 }
